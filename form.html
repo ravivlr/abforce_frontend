@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Protected Form - abFORCE</title>
+    <link rel="stylesheet" href="form.css">
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1>Enhanced Data Entry Form</h1>
+            <div style="display: flex; gap: 10px;">
+                <button id="profileBtn" onclick="showProfile()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Profile</button>
+                <button id="logoutBtn" onclick="logout()" style="background: #ff6b6b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Logout</button>
+            </div>
+        </div>
+        
+        <form id="dataForm">
+            <div class="form-group">
+                <label for="name">Full Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Phone Number:</label>
+                <input type="tel" id="phone" name="phone" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="message">Message:</label>
+                <textarea id="message" name="message" rows="4" required></textarea>
+            </div>
+            
+            <button type="submit">Submit Form</button>
+        </form>
+        
+        <div id="result" style="margin-top: 20px; padding: 10px; border-radius: 5px; display: none;"></div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div style="background-color: #1E1E1E; margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 500px; color: #E0E0E0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>User Profile</h2>
+                <button onclick="closeProfile()" style="background: #ff6b6b; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">×</button>
+            </div>
+            
+            <div id="profileInfo" style="margin-bottom: 20px;">
+                <!-- Profile information will be loaded here -->
+            </div>
+            
+            <div style="border-top: 1px solid #333; padding-top: 20px;">
+                <h3>Change Password</h3>
+                <div style="margin: 10px 0;">
+                    <label for="currentPassword">Current Password:</label>
+                    <input type="password" id="currentPassword" style="width: 100%; padding: 8px; margin: 5px 0; background: #333; color: white; border: 1px solid #555; border-radius: 3px;">
+                </div>
+                <div style="margin: 10px 0;">
+                    <label for="newPassword">New Password:</label>
+                    <input type="password" id="newPassword" style="width: 100%; padding: 8px; margin: 5px 0; background: #333; color: white; border: 1px solid #555; border-radius: 3px;">
+                </div>
+                <div style="margin: 10px 0;">
+                    <label for="confirmNewPassword">Confirm New Password:</label>
+                    <input type="password" id="confirmNewPassword" style="width: 100%; padding: 8px; margin: 5px 0; background: #333; color: white; border: 1px solid #555; border-radius: 3px;">
+                </div>
+                <button onclick="changePassword()" style="background: #00adb5; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px;">Change Password</button>
+            </div>
+            
+            <div id="profileResult" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication on page load
+        function checkAuthentication() {
+            const isAuthenticated = localStorage.getItem('isAuthenticated');
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            
+            // Debug information
+            console.log('Authentication Debug:');
+            console.log('isAuthenticated:', isAuthenticated);
+            console.log('user:', user);
+            console.log('token:', token);
+            
+            if (!isAuthenticated || isAuthenticated !== 'true' || !user) {
+                alert('Please login to access this page.\n\nDebug Info:\n- isAuthenticated: ' + isAuthenticated + '\n- user: ' + user + '\n- token: ' + token);
+                window.location.href = 'standalone_login.html';
+                return false;
+            }
+            
+            try {
+                const userData = JSON.parse(user);
+                console.log('Welcome, ' + userData.username);
+                // Show welcome message on the page
+                document.title = 'Welcome ' + userData.username + ' - abFORCE Form';
+            } catch (e) {
+                console.error('Error parsing user data:', e);
+                alert('Error parsing user data. Please login again.');
+                window.location.href = 'standalone_login.html';
+                return false;
+            }
+            return true;
+        }
+        
+        // Logout function
+        function logout() {
+            localStorage.removeItem('isAuthenticated');
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            window.location.href = 'standalone_login.html';
+        }
+        
+        // Form submission
+        document.getElementById('dataForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                message: document.getElementById('message').value
+            };
+            
+            // Show success message
+            document.getElementById('result').innerHTML = '<div style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px;">Form submitted successfully! Thank you for your submission.</div>';
+            document.getElementById('result').style.display = 'block';
+            
+            // Clear form
+            document.getElementById('dataForm').reset();
+        });
+        
+        // API Configuration
+        const API_BASE = 'https://abforce-backend-2025-bcf5a0h3amdmcdcy.canadacentral-01.azurewebsites.net';
+        //const API_BASE = 'http://localhost:3000';
+        // Show profile modal
+        function showProfile() {
+            loadProfileInfo();
+            document.getElementById('profileModal').style.display = 'block';
+        }
+
+        // Close profile modal
+        function closeProfile() {
+            document.getElementById('profileModal').style.display = 'none';
+            document.getElementById('profileResult').style.display = 'none';
+            // Clear password fields
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmNewPassword').value = '';
+        }
+
+        // Load profile information
+        function loadProfileInfo() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showProfileResult('❌ No authentication token found', 'error');
+                return;
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `${API_BASE}/profile`, true);
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            const user = data.user;
+                            
+                            document.getElementById('profileInfo').innerHTML = `
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Username:</strong> ${user.username}<br>
+                                    <strong>Email:</strong> ${user.email}<br>
+                                    <strong>Email Verified:</strong> ${user.isEmailVerified ? '✅ Yes' : '❌ No'}<br>
+                                    <strong>Member Since:</strong> ${new Date(user.createdAt).toLocaleDateString()}<br>
+                                    <strong>Last Login:</strong> ${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}<br>
+                                    <strong>Last Password Change:</strong> ${user.lastPasswordChange ? new Date(user.lastPasswordChange).toLocaleDateString() : 'Unknown'}
+                                </div>
+                            `;
+                        } catch (e) {
+                            showProfileResult('❌ Error parsing profile data', 'error');
+                        }
+                    } else {
+                        showProfileResult('❌ Failed to load profile information', 'error');
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                showProfileResult('❌ Network error loading profile', 'error');
+            };
+
+            xhr.send();
+        }
+
+        // Change password function
+        function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showProfileResult('❌ Please fill in all password fields', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showProfileResult('❌ New passwords do not match', 'error');
+                return;
+            }
+
+            // Basic password validation
+            if (newPassword.length < 8) {
+                showProfileResult('❌ New password must be at least 8 characters long', 'error');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showProfileResult('❌ No authentication token found', 'error');
+                return;
+            }
+
+            showProfileResult('⏳ Changing password...', 'info');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE}/change-password`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showProfileResult(`✅ ${data.message}`, 'success');
+                            
+                            // Clear password fields
+                            document.getElementById('currentPassword').value = '';
+                            document.getElementById('newPassword').value = '';
+                            document.getElementById('confirmNewPassword').value = '';
+                        } catch (e) {
+                            showProfileResult(`✅ Password changed successfully!`, 'success');
+                        }
+                    } else {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            let errorMessage = `❌ ${data.error}`;
+                            if (data.details && Array.isArray(data.details)) {
+                                errorMessage += '<br><br>Requirements not met:<br>• ' + data.details.join('<br>• ');
+                            }
+                            showProfileResult(errorMessage, 'error');
+                        } catch (e) {
+                            showProfileResult(`❌ Password change failed: ${xhr.status} ${xhr.statusText}`, 'error');
+                        }
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                showProfileResult('❌ Network error changing password', 'error');
+            };
+
+            xhr.send(JSON.stringify({
+                currentPassword,
+                newPassword
+            }));
+        }
+
+        // Show profile result messages
+        function showProfileResult(message, type = 'info') {
+            const resultDiv = document.getElementById('profileResult');
+            resultDiv.innerHTML = message;
+            resultDiv.className = type;
+            resultDiv.style.display = 'block';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('profileModal');
+            if (event.target === modal) {
+                closeProfile();
+            }
+        }
+
+        // Check authentication when page loads
+        window.onload = function() {
+            checkAuthentication();
+        };
+    </script>
+</body>
+</html>

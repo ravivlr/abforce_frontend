@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Standalone Login System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .tab.active {
+            background: #007bff;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2 style="text-align: center; margin-bottom: 30px;">?? Authentication System</h2>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('login')">Login</div>
+            <div class="tab" onclick="showTab('register')">Register</div>
+            <div class="tab" onclick="showTab('forgot-password')">Forgot Password</div>
+        </div>
+
+        <!-- Login Form -->
+        <div id="login-tab" class="tab-content active">
+            <h3>Login to Your Account</h3>
+            <div class="form-group">
+                <label for="loginUsername">Username:</label>
+                <input type="text" id="loginUsername" placeholder="Enter username" value="testuser18">
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password:</label>
+                <input type="password" id="loginPassword" placeholder="Enter password" value="Test123!">
+            </div>
+            <button onclick="loginUser()">Login</button>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="register-tab" class="tab-content">
+            <h3>Create New Account</h3>
+            <div class="form-group">
+                <label for="regUsername">Username:</label>
+                <input type="text" id="regUsername" placeholder="Choose username" value="testuser20">
+                <small style="color: #666;">Username can only contain letters and numbers</small>
+            </div>
+            <div class="form-group">
+                <label for="regEmail">Email:</label>
+                <input type="email" id="regEmail" placeholder="Enter email" value="test20@gmail.com">
+            </div>
+            <div class="form-group">
+                <label for="regPassword">Password:</label>
+                <input type="password" id="regPassword" placeholder="Choose password" value="Test123!">
+                <div id="password-strength" style="margin-top: 5px;"></div>
+            </div>
+            <div class="form-group">
+                <label for="regConfirmPassword">Confirm Password:</label>
+                <input type="password" id="regConfirmPassword" placeholder="Confirm password" value="Test123!">
+            </div>
+            <button onclick="registerUser()">Register</button>
+        </div>
+
+        <!-- Forgot Password Form -->
+        <div id="forgot-password-tab" class="tab-content">
+            <h3>Reset Your Password</h3>
+            <div class="form-group">
+                <label for="forgotEmail">Email:</label>
+                <input type="email" id="forgotEmail" placeholder="Enter your email address">
+            </div>
+            <button onclick="forgotPassword()">Send Reset Link</button>
+            <div style="margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 14px; color: #666;">
+                <strong>Password Requirements:</strong><br>
+                • At least 8 characters long<br>
+                • Contains uppercase and lowercase letters<br>
+                • Contains at least one number<br>
+                • Contains at least one special character
+            </div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Configuration - Change this to your API endpoint
+      
+        const API_BASE = 'https://abforce-backend-2025-bcf5a0h3amdmcdcy.canadacentral-01.azurewebsites.net';
+        //const API_BASE = 'http://localhost:3000';
+        // Global variables
+        let authToken = null;
+        let apiToken = null;
+        let currentUser = null;
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Display result messages
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = message;
+            resultDiv.className = type;
+        }
+
+        // Password strength validation
+        function validatePasswordStrength(password) {
+            const minLength = 8;
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasNumbers = /\d/.test(password);
+            const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            
+            const strength = {
+                length: password.length >= minLength,
+                upperCase: hasUpperCase,
+                lowerCase: hasLowerCase,
+                numbers: hasNumbers,
+                specialChar: hasSpecialChar
+            };
+            
+            const score = Object.values(strength).filter(Boolean).length;
+            return { strength, score, isValid: score === 5 };
+        }
+
+        function updatePasswordStrength(password) {
+            const strengthDiv = document.getElementById('password-strength');
+            const validation = validatePasswordStrength(password);
+            
+            let strengthText = '';
+            let strengthColor = '#ff6b6b';
+            
+            if (validation.score === 0) {
+                strengthText = 'Enter a password';
+                strengthColor = '#ccc';
+            } else if (validation.score <= 2) {
+                strengthText = 'Weak password';
+                strengthColor = '#ff6b6b';
+            } else if (validation.score <= 3) {
+                strengthText = 'Fair password';
+                strengthColor = '#ffa500';
+            } else if (validation.score <= 4) {
+                strengthText = 'Good password';
+                strengthColor = '#32cd32';
+            } else {
+                strengthText = 'Strong password';
+                strengthColor = '#00ff00';
+            }
+            
+            strengthDiv.innerHTML = `
+                <div style="color: ${strengthColor}; font-size: 12px; font-weight: bold;">
+                    ${strengthText}
+                </div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">
+                    ${!validation.strength.length ? '• At least 8 characters<br>' : ''}
+                    ${!validation.strength.upperCase ? '• Uppercase letter<br>' : ''}
+                    ${!validation.strength.lowerCase ? '• Lowercase letter<br>' : ''}
+                    ${!validation.strength.numbers ? '• Number<br>' : ''}
+                    ${!validation.strength.specialChar ? '• Special character' : ''}
+                </div>
+            `;
+        }
+
+        // Registration function
+        function registerUser() {
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+            if (!username || !email || !password || !confirmPassword) {
+                showResult('❌ Please fill in all fields', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showResult('❌ Passwords do not match', 'error');
+                return;
+            }
+
+            const passwordValidation = validatePasswordStrength(password);
+            if (!passwordValidation.isValid) {
+                showResult('❌ Password does not meet requirements. Please check the password strength indicator.', 'error');
+                return;
+            }
+
+            showResult('⏳ Registering user...', 'info');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE}/register`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 201) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            let message = `✅ Registration successful!<br><br>User: ${data.user.username}<br>Email: ${data.user.email}`;
+                            
+                            if (data.requiresEmailVerification) {
+                                message += '<br><br>📧 Please check your email to verify your account.';
+                            } else {
+                                message += '<br><br>You can now login!';
+                            }
+                            
+                            showResult(message, 'success');
+                            
+                            // Clear form
+                            document.getElementById('regUsername').value = '';
+                            document.getElementById('regEmail').value = '';
+                            document.getElementById('regPassword').value = '';
+                            document.getElementById('regConfirmPassword').value = '';
+                            document.getElementById('password-strength').innerHTML = '';
+                        } catch (e) {
+                            showResult(`✅ Registration successful!<br><br>Response: ${xhr.responseText}`, 'success');
+                        }
+                    } else {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            let errorMessage = `❌ Registration failed: ${data.error}`;
+                            if (data.details && Array.isArray(data.details)) {
+                                errorMessage += '<br><br>Requirements not met:<br>• ' + data.details.join('<br>• ');
+                            }
+                            showResult(errorMessage, 'error');
+                        } catch (e) {
+                            showResult(`❌ Registration failed: ${xhr.status} ${xhr.statusText}`, 'error');
+                        }
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                showResult(`❌ Network error: ${xhr.statusText}`, 'error');
+            };
+
+            xhr.send(JSON.stringify({
+                username,
+                email,
+                password,
+                confirm_password: confirmPassword
+            }));
+        }
+
+        // Login function
+        function loginUser() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showResult('❌ Please enter username and password', 'error');
+                return;
+            }
+
+            showResult('⏳ Logging in...', 'info');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE}/login`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    console.log("Login response status:", xhr.status);
+                    console.log("Login response text:", xhr.responseText);
+                    
+                    if (xhr.status === 200 || xhr.status === 201) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            console.log("Parsed login data:", data);
+                            
+                            authToken = 'authenticated';
+                            apiToken = data.api_token;
+                            currentUser = data.user;
+                            
+                            let message = `✅ Login successful!<br><br>User: ${data.user.username}<br>Email: ${data.user.email}`;
+                            if (data.user.isEmailVerified === false) {
+                                message += '<br><br>⚠️ Please verify your email address for full access.';
+                            }
+                            message += '<br><br>You are now authenticated!';
+                            
+                            showResult(message, 'success');
+
+                            // Call the success function
+                            onLoginSuccess(data.user, data.api_token);
+                        } catch (e) {
+                            console.error("Error parsing login response:", e);
+                            showResult(`✅ Login successful!<br><br>Response: ${xhr.responseText}`, 'success');
+                        }
+                    } else if (xhr.status === 423) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showResult(`🔒 Account Locked: ${data.error}<br><br>Lock time remaining: ${data.lockTimeRemaining}`, 'error');
+                        } catch (e) {
+                            showResult(`🔒 Account Locked: ${xhr.statusText}`, 'error');
+                        }
+                    } else {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            let errorMessage = `❌ Login failed: ${data.error}`;
+                            if (data.remainingAttempts !== undefined) {
+                                errorMessage += `<br><br>Remaining attempts: ${data.remainingAttempts}`;
+                            }
+                            showResult(errorMessage, 'error');
+                        } catch (e) {
+                            showResult(`❌ Login failed: ${xhr.status} ${xhr.statusText}`, 'error');
+                        }
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                showResult(`❌ Network error: ${xhr.statusText}`, 'error');
+            };
+
+            xhr.send(JSON.stringify({
+                username,
+                password
+            }));
+        }
+
+        // Forgot password function
+        function forgotPassword() {
+            const email = document.getElementById('forgotEmail').value;
+
+            if (!email) {
+                showResult('❌ Please enter your email address', 'error');
+                return;
+            }
+
+            showResult('⏳ Sending reset link...', 'info');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE}/forgot-password`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 201) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            let message = `✅ ${data.message}`;
+                            
+                            // For testing purposes, show the reset token
+                            if (data.resetToken) {
+                                message += `<br><br>🔑 Reset Token (for testing): ${data.resetToken}`;
+                                message += `<br>⏰ Expires in: ${data.expiresIn}`;
+                                message += `<br><br>To test password reset, use the token above with the reset endpoint.`;
+                            }
+                            
+                            showResult(message, 'success');
+                            document.getElementById('forgotEmail').value = '';
+                        } catch (e) {
+                            showResult(`✅ ${xhr.responseText}`, 'success');
+                        }
+                    } else {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showResult(`❌ ${data.error}`, 'error');
+                        } catch (e) {
+                            showResult(`❌ Error: ${xhr.status} ${xhr.statusText}`, 'error');
+                        }
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                showResult(`❌ Network error: ${xhr.statusText}`, 'error');
+            };
+
+            xhr.send(JSON.stringify({ email }));
+        }
+
+        // Callback function after successful login
+        function onLoginSuccess(user, token) {
+            console.log("User logged in:", user);
+            console.log("API Token:", token);
+            
+            // Store authentication data in localStorage
+            localStorage.setItem("isAuthenticated", "true");
+            localStorage.setItem("user", JSON.stringify(user));
+            localStorage.setItem("token", token);
+            
+            // Verify data was stored
+            console.log("Stored isAuthenticated:", localStorage.getItem("isAuthenticated"));
+            console.log("Stored user:", localStorage.getItem("user"));
+            console.log("Stored token:", localStorage.getItem("token"));
+            
+            // Redirect to form page after 2 seconds
+            setTimeout(() => {
+                window.location.href = "form.html";
+            }, 2000);
+        }
+
+        // Test API connectivity on page load
+        window.onload = function() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `${API_BASE}/health`, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showResult(`🔗 API Connected!<br>Status: ${data.status}<br>Database: ${data.database}<br>Authentication: ${data.authentication}`, 'success');
+                        } catch (e) {
+                            showResult(`🔗 API Connected!<br>Response: ${xhr.responseText}`, 'success');
+                        }
+                    } else {
+                        showResult(`❌ API Connection Error: ${xhr.status} ${xhr.statusText}`, 'error');
+                    }
+                }
+            };
+            xhr.onerror = function() {
+                showResult(`❌ API Connection Error: Network error`, 'error');
+            };
+            xhr.send();
+
+            // Add password strength validation listener
+            const passwordInput = document.getElementById('regPassword');
+            if (passwordInput) {
+                passwordInput.addEventListener('input', function() {
+                    updatePasswordStrength(this.value);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
