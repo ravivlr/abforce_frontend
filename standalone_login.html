@@ -380,6 +380,13 @@
                         } catch (e) {
                             showResult(`🔒 Account Locked: ${xhr.statusText}`, 'error');
                         }
+                    } else if (xhr.status === 403) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showResult(`📧 Email Verification Required: ${data.error}<br><br>Please check your email inbox and click the verification link to activate your account.`, 'error');
+                        } catch (e) {
+                            showResult(`📧 Email Verification Required: ${xhr.statusText}`, 'error');
+                        }
                     } else {
                         try {
                             const data = JSON.parse(xhr.responseText);
