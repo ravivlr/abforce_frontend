@@ -128,6 +128,21 @@
                 <input type="email" id="regEmail" placeholder="Enter email" value="test20@gmail.com">
             </div>
             <div class="form-group">
+                <label for="regUserName">Full Name:</label>
+                <input type="text" id="regUserName" placeholder="Enter your full name" value="John Doe">
+                <small style="color: #666;">Your complete name as it should appear</small>
+            </div>
+            <div class="form-group">
+                <label for="regOrganizationName">Organization Name:</label>
+                <input type="text" id="regOrganizationName" placeholder="Enter organization name" value="Acme Corporation">
+                <small style="color: #666;">Company or organization you represent</small>
+            </div>
+            <div class="form-group">
+                <label for="regUserRole">Role Description:</label>
+                <textarea id="regUserRole" placeholder="Describe your role and responsibilities (max 100 words)" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; resize: vertical;">Software Engineer with 5 years of experience in web development, specializing in React and Node.js. Responsible for building scalable applications and leading a team of 3 developers.</textarea>
+                <div id="word-count" style="color: #666; font-size: 12px; margin-top: 5px;">Word count: <span id="word-count-number">0</span>/100</div>
+            </div>
+            <div class="form-group">
                 <label for="regPassword">Password:</label>
                 <input type="password" id="regPassword" placeholder="Choose password" value="Test123!">
                 <div id="password-strength" style="margin-top: 5px;"></div>
@@ -162,8 +177,8 @@
     <script>
         // Configuration - Change this to your API endpoint
       
-        const API_BASE = 'https://abforce-backend-2025-bcf5a0h3amdmcdcy.canadacentral-01.azurewebsites.net';
-        //const API_BASE = 'http://localhost:3000';
+        //const API_BASE = 'https://abforce-backend-2025-bcf5a0h3amdmcdcy.canadacentral-01.azurewebsites.net';
+        const API_BASE = 'http://localhost:3000';
         // Global variables
         let authToken = null;
         let apiToken = null;
@@ -253,11 +268,21 @@
         function registerUser() {
             const username = document.getElementById('regUsername').value;
             const email = document.getElementById('regEmail').value;
+            const userName = document.getElementById('regUserName').value;
+            const organizationName = document.getElementById('regOrganizationName').value;
+            const userRole = document.getElementById('regUserRole').value;
             const password = document.getElementById('regPassword').value;
             const confirmPassword = document.getElementById('regConfirmPassword').value;
 
-            if (!username || !email || !password || !confirmPassword) {
+            if (!username || !email || !userName || !organizationName || !userRole || !password || !confirmPassword) {
                 showResult('❌ Please fill in all fields', 'error');
+                return;
+            }
+
+            // Validate word count for user role
+            const wordCount = userRole.split(/\s+/).filter(word => word.length > 0).length;
+            if (wordCount > 100) {
+                showResult('❌ Role description must be 100 words or less', 'error');
                 return;
             }
 
@@ -283,9 +308,11 @@
                     if (xhr.status === 200 || xhr.status === 201) {
                         try {
                             const data = JSON.parse(xhr.responseText);
-                            let message = `✅ Registration successful!<br><br>User: ${data.user.username}<br>Email: ${data.user.email}`;
+                            let message = `✅ Registration successful!<br><br>User: ${data.user.username}<br>Email: ${data.user.email}<br>Name: ${data.user.userName}<br>Organization: ${data.user.organizationName}`;
                             
-                            if (data.requiresEmailVerification) {
+                            if (data.requiresAdminApproval) {
+                                message += '<br><br>⏳ Your account is pending admin approval. You will receive an email once approved.';
+                            } else if (data.requiresEmailVerification) {
                                 message += '<br><br>📧 Please check your email to verify your account.';
                             } else {
                                 message += '<br><br>You can now login!';
@@ -296,9 +323,13 @@
                             // Clear form
                             document.getElementById('regUsername').value = '';
                             document.getElementById('regEmail').value = '';
+                            document.getElementById('regUserName').value = '';
+                            document.getElementById('regOrganizationName').value = '';
+                            document.getElementById('regUserRole').value = '';
                             document.getElementById('regPassword').value = '';
                             document.getElementById('regConfirmPassword').value = '';
                             document.getElementById('password-strength').innerHTML = '';
+                            document.getElementById('word-count-number').textContent = '0';
                         } catch (e) {
                             showResult(`✅ Registration successful!<br><br>Response: ${xhr.responseText}`, 'success');
                         }
@@ -324,6 +355,9 @@
             xhr.send(JSON.stringify({
                 username,
                 email,
+                userName,
+                organizationName,
+                userRole,
                 password,
                 confirm_password: confirmPassword
             }));
@@ -485,6 +519,22 @@
             }, 2000);
         }
 
+        // Word count function for user role
+        function updateWordCount(text) {
+            const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
+            const wordCountElement = document.getElementById('word-count-number');
+            if (wordCountElement) {
+                wordCountElement.textContent = wordCount;
+                if (wordCount > 100) {
+                    wordCountElement.style.color = '#dc3545';
+                } else if (wordCount > 80) {
+                    wordCountElement.style.color = '#ffc107';
+                } else {
+                    wordCountElement.style.color = '#28a745';
+                }
+            }
+        }
+
         // Test API connectivity on page load
         window.onload = function() {
             const xhr = new XMLHttpRequest();
@@ -514,6 +564,16 @@
                 passwordInput.addEventListener('input', function() {
                     updatePasswordStrength(this.value);
                 });
+            }
+
+            // Add word count validation listener for user role
+            const userRoleInput = document.getElementById('regUserRole');
+            if (userRoleInput) {
+                userRoleInput.addEventListener('input', function() {
+                    updateWordCount(this.value);
+                });
+                // Initialize word count
+                updateWordCount(userRoleInput.value);
             }
         }
     </script>

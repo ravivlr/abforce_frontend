@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Approval - abFORCE</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .admin-container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .approve-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .reject-btn {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .approve-btn:hover, .reject-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .user-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .user-info h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .user-info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .user-info td {
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .user-info td:first-child {
+            font-weight: bold;
+            color: #666;
+            width: 30%;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <h1>🔐 Admin Approval</h1>
+        <div id="result"></div>
+        
+        <div id="user-info" class="user-info" style="display: none;">
+            <h3>👤 User Information</h3>
+            <table id="user-table">
+                <!-- User data will be populated here -->
+            </table>
+        </div>
+        
+        <div id="action-buttons" style="display: none;">
+            <button class="approve-btn" onclick="approveUser()">✅ Approve User</button>
+            <button class="reject-btn" onclick="rejectUser()">❌ Reject User</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let approvalToken = null;
+        let userData = null;
+
+        // Get token and action from URL parameters
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token');
+        }
+
+        function getActionFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('action');
+        }
+
+        // Display result messages
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = message;
+            resultDiv.className = type;
+        }
+
+        // Approve user
+        function approveUser() {
+            if (!approvalToken) {
+                showResult('❌ No approval token available', 'error');
+                return;
+            }
+
+            showResult('⏳ Approving user...', 'info');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE}/admin/approve`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showResult(`✅ User approved successfully!<br><br>Email verification sent to: ${data.user.email}`, 'success');
+                            document.getElementById('action-buttons').style.display = 'none';
+                        } catch (e) {
+                            showResult(`✅ User approved successfully!<br><br>Response: ${xhr.responseText}`, 'success');
+                        }
+                    } else {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showResult(`❌ Approval failed: ${data.error}`, 'error');
+                        } catch (e) {
+                            showResult(`❌ Approval failed: ${xhr.status} ${xhr.statusText}`, 'error');
+                        }
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                showResult(`❌ Network error: ${xhr.statusText}`, 'error');
+            };
+
+            xhr.send(JSON.stringify({ token: approvalToken }));
+        }
+
+        // Reject user
+        function rejectUser() {
+            if (!approvalToken) {
+                showResult('❌ No approval token available', 'error');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to reject this user registration?')) {
+                return;
+            }
+
+            showResult('⏳ Rejecting user...', 'info');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE}/admin/reject`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showResult(`✅ User rejected successfully!<br><br>Rejection email sent to: ${data.user.email}`, 'success');
+                            document.getElementById('action-buttons').style.display = 'none';
+                        } catch (e) {
+                            showResult(`✅ User rejected successfully!<br><br>Response: ${xhr.responseText}`, 'success');
+                        }
+                    } else {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            showResult(`❌ Rejection failed: ${data.error}`, 'error');
+                        } catch (e) {
+                            showResult(`❌ Rejection failed: ${xhr.status} ${xhr.statusText}`, 'error');
+                        }
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                showResult(`❌ Network error: ${xhr.statusText}`, 'error');
+            };
+
+            xhr.send(JSON.stringify({ token: approvalToken }));
+        }
+
+        // Load user data (mock for now)
+        function loadUserData() {
+            // In a real implementation, you would fetch user data using the token
+            // For now, we'll show a placeholder
+            showResult('🔍 Loading user information...', 'info');
+            
+            // Simulate loading user data
+            setTimeout(() => {
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('action-buttons').style.display = 'block';
+                showResult('✅ User information loaded. Please review and take action.', 'success');
+            }, 1000);
+        }
+
+        // Initialize page
+        window.onload = function() {
+            approvalToken = getTokenFromUrl();
+            const action = getActionFromUrl();
+            
+            if (!approvalToken) {
+                showResult('❌ No approval token provided in URL', 'error');
+                return;
+            }
+
+            showResult(`🔑 Approval token: ${approvalToken.substring(0, 20)}...`, 'info');
+            
+            // Auto-execute action if provided
+            if (action === 'approve') {
+                setTimeout(() => {
+                    approveUser();
+                }, 2000);
+            } else if (action === 'reject') {
+                setTimeout(() => {
+                    rejectUser();
+                }, 2000);
+            } else {
+                loadUserData();
+            }
+        };
+    </script>
+</body>
+</html>
